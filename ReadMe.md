@@ -1,6 +1,10 @@
 # Daily Chess with Claude — Google Apps Script (Email Only)
 
-Play a daily correspondence chess game against Claude, entirely via email replies.
+[![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-4285F4?logo=google&logoColor=white)](https://script.google.com/)
+[![Claude API](https://img.shields.io/badge/Claude%20API-191919?logo=anthropic&logoColor=white)](https://www.anthropic.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Play a daily correspondence chess game against Claude, entirely via email replies. **Designed for use with a physical chess board** - emails contain only move history in algebraic notation, perfect for following along on a real board.
 
 ## How it works
 
@@ -75,4 +79,5 @@ All commands must be the **first word** in your reply.
 - **Notation guide:** Every email includes an algebraic notation reference at the bottom for quick lookup.
 - **Sender verification:** Only replies from your Google account email are processed.
 - **Changing difficulty mid-game:** Edit cell B5 in the GameState sheet.
+- **Game analysis with AI:** Make your GameState sheet public (Share → Anyone with the link can view) and share the link with any LLM chatbot capable of reading Google Sheets (like Claude.ai). Ask it to analyze your position, suggest strategies, or explain opening theory based on your current game!
 - **Troubleshooting:** If `quickStart` or other functions throw errors, check the execution log for details.

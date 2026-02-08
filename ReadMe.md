@@ -1,10 +1,10 @@
-# Daily Chess with Claude — Google Apps Script (Email Only)
+# Email Chess with Claude — Google Apps Script (Email Only)
 
 [![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-4285F4?logo=google&logoColor=white)](https://script.google.com/)
 [![Claude API](https://img.shields.io/badge/Claude%20API-191919?logo=anthropic&logoColor=white)](https://www.anthropic.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Play a daily correspondence chess game against Claude, entirely via email replies. **Designed for use with a physical chess board** - emails contain only move history in algebraic notation, perfect for following along on a real board.
+Play a correspondence chess game against Claude, entirely via email replies. **Designed for use with a physical chess board** - emails contain only move history in algebraic notation, perfect for following along on a real board.
 
 ## How it works
 

@@ -4,18 +4,27 @@
 [![Claude API](https://img.shields.io/badge/Claude%20API-191919?logo=anthropic&logoColor=white)](https://www.anthropic.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Play asynchronous correspondence chess against Claude AI entirely through email. Make moves at your own pace - the game waits for you!
+Play correspondence chess against Claude AI through email. Make moves at your own pace.
 
 **Designed for use with a physical chess board** - emails contain move history in algebraic notation, perfect for following along on a real board.
 
 ## Features
 
-- 📧 **Fully Email-Driven**: Play chess without leaving your inbox
-- ⏰ **Play Anytime**: No daily commitments - move when you want
-- 🎯 **Three Difficulty Levels**: Beginner, Intermediate, Advanced
-- 📝 **Standard Notation**: Uses algebraic notation (e.g., e4, Nf3, O-O)
-- 🔄 **Automatic Responses**: Claude responds within minutes of your move
-- 🏷️ **Gmail Organization**: Auto-labels and archives game threads
+- **Fully Email-Driven**: Play chess without leaving your inbox
+- **Play Anytime**: No daily reminders - move when you want
+- **Three Difficulty Levels**: Beginner, Intermediate, Advanced
+- **Standard Notation**: Uses algebraic notation (e.g., e4, Nf3, O-O)
+- **Automatic Responses**: Claude responds within minutes of your move
+- **Gmail Organization**: Labels threads as "chess-claude" for easy filtering
+
+## How it works
+- Set up the Google spreadsheet and app
+- You are emailed Claude's move (or you move first if playing white)
+- You reply with your move in algebraic notation
+- The script polls Gmail every few minutes, picks up your reply, and emails back Claude's response in the same thread
+- Game state lives in a Google Sheet that can be used to discuss your game with any AI chatbot
+- All chess emails are labeled "chess-claude" for easy filtering
+
 
 ## Quick Start
 
@@ -85,7 +94,6 @@ Edit these in the script's `CONFIG` object:
 | `DIFFICULTY` | `intermediate` | `beginner`, `intermediate`, `advanced` | Claude's playing strength |
 | `PLAYER_COLOUR` | `white` | `white`, `black` | Your color for new games |
 | `POLL_MINUTES` | `5` | Any number | How often to check for replies |
-| `AUTO_ARCHIVE` | `true` | `true`, `false` | Auto-archive threads after moves |
 
 ## Manual Setup Functions
 
@@ -120,7 +128,7 @@ Run these in order:
 ## Tips
 
 - 💡 The game thread stays in one email conversation
-- 📁 Archived threads are still playable (the script finds them)
+- 📧 Emails stay in your inbox - delete or archive them as you prefer
 - ⚡ Moves are processed within 5 minutes typically
 - 🎯 Claude provides commentary based on difficulty level
 - 🔄 You can have one active game at a time

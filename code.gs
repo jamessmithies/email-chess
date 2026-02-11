@@ -359,6 +359,10 @@ RULES:
   * Promotion: include '=' (e.g., "e8=Q")
   * Check/Checkmate: include '+' or '#' (e.g., "Qd7+", "Qf7#")
 - IMPORTANT: Always use capital letters for pieces: K, Q, R, B, N (never lowercase)
+- FEN FORMAT: The en passant square (4th field) should be "-" unless:
+  * A pawn just moved two squares forward AND
+  * An opponent pawn is positioned to capture it en passant
+  * Example: After 1.e4, if black has a pawn on d4 or f4, then e3 is the en passant square
 - If the game is over (checkmate, stalemate, draw), set gameOver to true and result to the outcome.
 - Validate that your move is legal in the given position.
 
@@ -456,6 +460,12 @@ function processPlayerMove(moveStr) {
   Logger.log('Processing move: ' + moveStr);
   Logger.log('Current FEN: ' + state.fen);
   Logger.log('Player colour: ' + state.playerColour);
+  Logger.log('Move history: ' + state.moveHistory);
+
+  // Additional validation for common pawn moves
+  if (/^[a-h][1-8]$/.test(moveStr)) {
+    Logger.log('Detected pawn move notation: ' + moveStr);
+  }
 
   const systemPrompt = `You are a chess validator. The player is ${state.playerColour}.
 
@@ -463,14 +473,20 @@ The player submitted: "${moveStr}"
 
 Analyze the current position carefully and determine if this is a legal move.
 
+IMPORTANT RULES FOR MOVE INTERPRETATION:
+- If the move is just a square like "b3", "e4", "d5" (no piece letter), it's a PAWN move to that square
+- The move "b3" means: move the pawn that can legally reach b3 (usually the b-pawn moving forward)
+- For piece moves, they include the piece letter: "Nf3", "Be5", "Qd4"
+- Castling is written as "O-O" or "O-O-O"
+
 If this is a legal chess move in the current position:
 - Return: {"valid":true,"fen":"<new FEN after the move>","move":"<standardized algebraic notation>"}
+- IMPORTANT: Set en passant square to "-" unless a pawn just moved two squares AND an opponent pawn can capture it
 
 If illegal:
 - Return: {"valid":false,"reason":"<why it's illegal>"}
 
-Note: For pawn moves, just the destination square is given (e.g., "e4" means move a pawn to e4).
-The pawn that moves is the one that can legally reach that square.
+Double-check that pawn moves like "b3", "e4", "h6" are treated as pawn moves, not as invalid notation.
 Return ONLY the JSON, no other text.`;
 
   const userMessage =
@@ -583,7 +599,10 @@ function buildMoveEmail(claudeResponse) {
     body += `Game over: ${claudeResponse.result}\n\n`;
     body += `Reply NEW to start a new game.\n`;
   } else {
-    body += `Reply with your move (e.g. Nf3, O-O, e4).\n`;
+    body += `Reply with your move:\n`;
+    body += `  • Pawn moves: just the square (e.g. e4, b3, d5)\n`;
+    body += `  • Piece moves: piece + square (e.g. Nf3, Be5, Qd1)\n`;
+    body += `  • Castling: O-O or O-O-O\n`;
     body += `Reply NEW to start a new game.\n`;
     body += `Reply RESIGN to resign.\n`;
     body += `Reply PAUSE to pause daily emails.\n`;

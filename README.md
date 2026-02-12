@@ -56,10 +56,12 @@ gcloud projects create email-chess --name="Email Chess"
 gcloud config set project email-chess
 
 # Enable required APIs
-gcloud services enable cloudfunctions.googleapis.com
-gcloud services enable cloudbuild.googleapis.com
-gcloud services enable run.googleapis.com
+gcloud services enable cloudfunctions.googleapis.com --project=YOUR_PROJECT_ID
+gcloud services enable cloudbuild.googleapis.com --project=YOUR_PROJECT_ID
+gcloud services enable run.googleapis.com --project=YOUR_PROJECT_ID
 ```
+
+> **Tip**: Replace `YOUR_PROJECT_ID` with your actual GCP project ID throughout this guide. You can avoid repeating `--project` by running `gcloud config set project YOUR_PROJECT_ID` first.
 
 ### Step 2: Set a billing budget alert
 
@@ -104,10 +106,12 @@ Gen2 Cloud Functions run on Cloud Run, which requires an **ID token** (not an ac
 ```bash
 # Create a service account
 gcloud iam service-accounts create stockfish-invoker \
+  --project=YOUR_PROJECT_ID \
   --display-name="Stockfish Cloud Function Invoker"
 
 # Grant it permission to invoke the Cloud Function
 gcloud functions add-invoker-policy-binding getMove \
+  --project=YOUR_PROJECT_ID \
   --gen2 \
   --region=us-central1 \
   --member="serviceAccount:stockfish-invoker@YOUR_PROJECT_ID.iam.gserviceaccount.com"
@@ -115,6 +119,7 @@ gcloud functions add-invoker-policy-binding getMove \
 # Grant your Google account permission to impersonate this service account
 gcloud iam service-accounts add-iam-policy-binding \
   stockfish-invoker@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+  --project=YOUR_PROJECT_ID \
   --member="user:YOUR_EMAIL@gmail.com" \
   --role="roles/iam.serviceAccountTokenCreator"
 ```
@@ -126,7 +131,7 @@ Note the service account email: `stockfish-invoker@YOUR_PROJECT_ID.iam.gservicea
 ### Step 5: Enable the IAM Credentials API
 
 ```bash
-gcloud services enable iamcredentials.googleapis.com
+gcloud services enable iamcredentials.googleapis.com --project=YOUR_PROJECT_ID
 ```
 
 ### Step 6: Test the Cloud Function
@@ -161,7 +166,22 @@ Apps Script needs to use your GCP project (not its default hidden project) so it
 3. Enter your GCP project **number** (find it at [console.cloud.google.com](https://console.cloud.google.com) under project settings -- it's the numeric ID, not the project name)
 4. Click **Set project**
 
-### Step 9: Add the script files
+> **Note**: You may see a red warning when changing the GCP project -- this is normal. It warns that switching projects may affect existing functionality.
+
+### Step 9: Configure the OAuth consent screen
+
+Apps Script requires an OAuth consent screen to authorize API access.
+
+1. Go to [APIs & Services > OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent) in your GCP project
+2. Select **External** (the only option for personal Google accounts; **Internal** is only available for Google Workspace)
+3. Fill in the required fields (app name, user support email, developer email)
+4. On the **Scopes** page, no scopes need to be added manually
+5. On the **Test users** page, add your own email address
+6. Complete the wizard
+
+> **Important**: While the app is in "Testing" status, only test users you add can authorize it. This is fine for personal use. If you see "Access blocked: has not completed the Google verification process", you need to add yourself as a test user in this step.
+
+### Step 10: Add the script files
 
 **File 1: Chess.gs**
 1. Click the **+** next to "Files" in the left sidebar
@@ -175,7 +195,16 @@ Apps Script needs to use your GCP project (not its default hidden project) so it
 2. Replace all content with the contents of `code.gs` from this repo
 3. Save (Ctrl+S)
 
-### Step 10: Configure Script Properties
+**File 3: appsscript.json** (required)
+1. In the Apps Script editor, click **Project Settings** (gear icon)
+2. Check **Show "appsscript.json" manifest file in editor**
+3. Click on `appsscript.json` in the left sidebar
+4. Replace all content with the contents of `appsscript.json` from this repo
+5. Save (Ctrl+S)
+
+This file declares the OAuth scopes the script needs. Without it, Apps Script auto-detects scopes and may miss the `cloud-platform` scope required for IAM authentication. See [appsscript.json](#appsscriptjson) below for details.
+
+### Step 11: Configure Script Properties
 
 1. Click **Project Settings** (gear icon in left sidebar)
 2. Scroll to **Script Properties**
@@ -188,12 +217,13 @@ Apps Script needs to use your GCP project (not its default hidden project) so it
 | `STOCKFISH_SA` | The service account email from step 4 (e.g. `stockfish-invoker@your-project.iam.gserviceaccount.com`) |
 | `EMAIL` | *(Optional)* Your email address. If not set, uses the account email. |
 
-### Step 11: Start playing
+### Step 12: Start playing
 
 1. In the Apps Script editor, select `quickStart` from the function dropdown
 2. Click **Run**
-3. When prompted, click **Review Permissions** and authorize the script (you may need to click "Advanced" and "Go to project" if it shows a warning)
-4. Check your inbox for the first chess email
+3. When prompted, click **Review Permissions** and authorize the script
+4. You may see a warning saying the app isn't verified -- click **Advanced** then **Go to [project name] (unsafe)** to proceed (this is your own script, running in your own account)
+5. Check your inbox for the first chess email
 
 ## How to Play
 
@@ -254,11 +284,30 @@ Edit these in the `CONFIG` object at the top of `code.gs`:
 
 ## Security
 
-- The Cloud Function is deployed with **IAM authentication** -- it is not publicly accessible
-- GAS authenticates using `ScriptApp.getOAuthToken()` which provides an OAuth 2.0 token
-- Only your Google account (and any accounts you explicitly grant `roles/run.invoker`) can call the function
-- The only data sent to the Cloud Function is FEN strings (board positions) -- no personal data
-- The Anthropic API key is stored in GAS Script Properties (encrypted at rest by Google)
+### Authentication chain
+
+The Stockfish Cloud Function is deployed with **IAM authentication** (`--no-allow-unauthenticated`) -- it is not publicly accessible. Because Gen2 Cloud Functions run on **Cloud Run**, they require an **ID token** (not an access token) for invocation.
+
+Apps Script authenticates to the Cloud Function through a three-step chain:
+
+1. `ScriptApp.getOAuthToken()` provides an OAuth 2.0 access token for the logged-in user
+2. That access token calls the **IAM Credentials API** to impersonate a service account (`STOCKFISH_SA`)
+3. The IAM Credentials API returns an **ID token** scoped to the Cloud Function URL
+4. The ID token is sent in the `Authorization: Bearer` header to invoke the Cloud Function
+
+This requires:
+- A **service account** with the `Cloud Run Invoker` role on the Cloud Function
+- Your Google account must have the `Service Account Token Creator` role on that service account
+- The Apps Script project must be **linked to your GCP project** (not its default hidden project)
+- The **IAM Credentials API** must be enabled on your GCP project
+
+### Data privacy
+
+- The only data sent to the Cloud Function is **FEN strings** (board positions) -- no personal data
+- The Cloud Function validates FEN input with a character whitelist and length/format checks
+- The Anthropic API key is stored in GAS **Script Properties** (encrypted at rest by Google)
+- Only your Google account (and any accounts you explicitly grant roles to) can invoke the function
+- chess.js validates all moves deterministically -- no reliance on AI for game logic
 
 ## Estimated Costs
 
@@ -269,6 +318,24 @@ Edit these in the `CONFIG` object at the top of `code.gs`:
 | Google Apps Script / Gmail / Sheets | Free |
 
 **Total**: Under $1/month for casual play.
+
+## appsscript.json
+
+The `appsscript.json` manifest file declares the OAuth scopes the script requires. This file is included in the repo and must be copied into your Apps Script project (see step 10).
+
+When OAuth scopes are explicitly declared, Apps Script **stops auto-detecting** scopes. This means every required scope must be listed. The file includes:
+
+| Scope | Purpose |
+|-------|---------|
+| `script.external_request` | HTTP calls to Stockfish and Claude APIs |
+| `spreadsheets` | Read/write game state in the GameState sheet |
+| `gmail.modify` | Read replies and manage labels/archiving |
+| `gmail.send` | Send game emails |
+| `cloud-platform` | Call the IAM Credentials API for ID token generation |
+| `userinfo.email` | Identify the authenticated user (sender guard) |
+| `script.scriptapp` | Manage time-based triggers |
+
+> **Why declare scopes explicitly?** Apps Script's auto-detection often misses the `cloud-platform` scope needed for IAM authentication. Without it, the script fails with "insufficient permissions" when trying to get an ID token.
 
 ## Troubleshooting
 
@@ -298,6 +365,16 @@ Edit these in the `CONFIG` object at the top of `code.gs`:
 - Check your Anthropic API key is valid and has credit
 - Check the Apps Script execution log for details
 
+### "Access blocked" or "has not completed the Google verification process"
+- Go to GCP Console > APIs & Services > OAuth consent screen
+- Add your email address as a **test user**
+- This is required while the app is in "Testing" status (normal for personal projects)
+
+### "Insufficient permissions" errors
+- Ensure your `appsscript.json` includes all required scopes (see [appsscript.json](#appsscriptjson))
+- After updating scopes, you must re-authorize: run any function, then click **Review Permissions** again
+- Common missing scopes: `cloud-platform` (for IAM), `userinfo.email` (for sender guard), `script.scriptapp` (for triggers)
+
 ### Moves not being picked up
 - Verify triggers are set up: run `setupTriggers()` in the Apps Script editor
 - Check that your reply is in the correct email thread
@@ -318,6 +395,7 @@ If you need to redeploy after changes:
 cd stockfish-cloud-function
 
 gcloud functions deploy getMove \
+  --project=YOUR_PROJECT_ID \
   --gen2 \
   --runtime=nodejs20 \
   --region=us-central1 \

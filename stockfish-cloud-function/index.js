@@ -125,7 +125,7 @@ function getBestMove(fen, difficulty) {
  *   { "move": "<UCI move e.g. g1f3>", "evaluation": { "type": "cp|mate", "value": <number> } }
  *
  * Authentication: This function should be deployed with --no-allow-unauthenticated.
- * GAS calls it with an OAuth token via ScriptApp.getOAuthToken().
+ * GAS calls it with an ID token obtained via service account impersonation (IAM Credentials API).
  */
 functions.http('getMove', async (req, res) => {
   // Only accept POST
@@ -143,6 +143,12 @@ functions.http('getMove', async (req, res) => {
   }
   if (fen.length > 200) {
     res.status(400).json({ error: 'FEN string too long.' });
+    return;
+  }
+  // Character whitelist: only allow characters valid in FEN strings
+  // Pieces: rnbqkpRNBQKP, digits: 0-9, slashes, spaces, dashes, letters for castling/en-passant
+  if (!/^[rnbqkpRNBQKP0-9\/\s\-a-h\w]+$/.test(fen.trim())) {
+    res.status(400).json({ error: 'FEN contains invalid characters.' });
     return;
   }
   // Basic FEN format check: should have 6 space-separated fields

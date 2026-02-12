@@ -1267,9 +1267,9 @@ function peg$parse(input, options) {
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-const MASK64 = 0xffffffffffffffffn;
+const MASK64 = BigInt("0xffffffffffffffff");
 function rotl(x, k) {
-    return ((x << k) | (x >> (64n - k))) & 0xffffffffffffffffn;
+    return ((x << k) | (x >> (BigInt(64) - k))) & BigInt("0xffffffffffffffff");
 }
 function wrappingMul(x, y) {
     return (x * y) & MASK64;
@@ -1278,16 +1278,16 @@ function wrappingMul(x, y) {
 function xoroshiro128(state) {
     return function () {
         let s0 = BigInt(state & MASK64);
-        let s1 = BigInt((state >> 64n) & MASK64);
-        const result = wrappingMul(rotl(wrappingMul(s0, 5n), 7n), 9n);
+        let s1 = BigInt((state >> BigInt(64)) & MASK64);
+        const result = wrappingMul(rotl(wrappingMul(s0, BigInt(5)), BigInt(7)), BigInt(9));
         s1 ^= s0;
-        s0 = (rotl(s0, 24n) ^ s1 ^ (s1 << 16n)) & MASK64;
-        s1 = rotl(s1, 37n);
-        state = (s1 << 64n) | s0;
+        s0 = (rotl(s0, BigInt(24)) ^ s1 ^ (s1 << BigInt(16))) & MASK64;
+        s1 = rotl(s1, BigInt(37));
+        state = (s1 << BigInt(64)) | s0;
         return result;
     };
 }
-const rand = xoroshiro128(0xa187eb39cdcaed8f31c4b365b102e01en);
+const rand = xoroshiro128(BigInt("0xa187eb39cdcaed8f31c4b365b102e01e"));
 const PIECE_KEYS = Array.from({ length: 2 }, () => Array.from({ length: 6 }, () => Array.from({ length: 128 }, () => rand())));
 const EP_KEYS = Array.from({ length: 8 }, () => rand());
 const CASTLING_KEYS = Array.from({ length: 16 }, () => rand());
@@ -1815,7 +1815,7 @@ class Chess {
     _history = [];
     _comments = {};
     _castling = { w: 0, b: 0 };
-    _hash = 0n;
+    _hash = BigInt(0);
     // tracks number of times a position has been seen for repetition checking
     _positionCount = new Map();
     constructor(fen = DEFAULT_POSITION, { skipValidation = false } = {}) {
@@ -1986,7 +1986,7 @@ class Chess {
     }
     _pieceKey(i) {
         if (!this._board[i]) {
-            return 0n;
+            return BigInt(0);
         }
         const { color, type } = this._board[i];
         const colorIndex = {
@@ -2004,14 +2004,14 @@ class Chess {
         return PIECE_KEYS[colorIndex][typeIndex][i];
     }
     _epKey() {
-        return this._epSquare === EMPTY ? 0n : EP_KEYS[this._epSquare & 7];
+        return this._epSquare === EMPTY ? BigInt(0) : EP_KEYS[this._epSquare & 7];
     }
     _castlingKey() {
         const index = (this._castling.w >> 5) | (this._castling.b >> 3);
         return CASTLING_KEYS[index];
     }
     _computeHash() {
-        let hash = 0n;
+        let hash = BigInt(0);
         for (let i = Ox88.a8; i <= Ox88.h1; i++) {
             // did we run off the end of the board
             if (i & 0x88) {
